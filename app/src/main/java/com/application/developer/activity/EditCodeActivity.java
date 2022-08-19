@@ -9,6 +9,7 @@ import androidx.appcompat.app.*;
 import androidx.appcompat.widget.*;
 import com.application.developer.*;
 import com.application.developer.editor.*;
+import com.application.developer.util.LogUtil;
 import com.application.developer.view.*;
 import androidx.appcompat.widget.Toolbar;
 import android.app.Activity;
@@ -21,6 +22,7 @@ import java.io.BufferedReader;
 import android.util.Log;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
+import java.util.ArrayList;
 import java.util.List;
 import android.net.Uri;
 import androidx.core.content.FileProvider;
@@ -80,6 +82,66 @@ public class EditCodeActivity extends AppCompatActivity
 			});
     }
 
+    private List<String> fileGroupPathAll = new ArrayList<>();
+    private List<String> filePathAll = new ArrayList<>();
+    public void findFile(File file){
+        if (file!=null&&file.exists()){
+            if (file.isDirectory()){
+                //是文件夹,继续查找：
+                File[] files = file.listFiles();
+                for (File fileItem:files){
+                    findFile(fileItem);
+                }
+            }else {
+                //是文件,执行文件处理：
+                moveDynamicDTFile(file);
+            }
+        }
+    }
+
+    /**
+     * 动态处理文件
+     */
+    public void moveDynamicDTFile(File file){
+        String filePath = file.getPath();
+        if (filePath.contains(".java"))
+        {
+            String j = filePath.replace("src", "build/java");
+            try
+            {
+                CompileUtils.copyFile(new File(filePath), new File(j));
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            LogUtil.e("EditCodeActivity---onOptionsItemSelected-->java file: i:"+filePath+" j:"+j);
+            fileGroupPathAll.add(file.getParent());
+            filePathAll.add(filePath);
+        }
+        else if (filePath.contains(".soft"))
+        {
+            String j = filePath.replace("src", "build/java").replace(".soft", ".java");
+            try
+            {
+                CompileUtils.writeFile(getSoft(filePath), j);
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+            LogUtil.e("EditCodeActivity---onOptionsItemSelected-->soft file: i:"+filePath+" j:"+j);
+        }
+    }
+    public void cleanBuild(){
+        filePathAll.clear();
+        fileGroupPathAll.clear();
+        Intent intent = getIntent();
+        File javapath = new File(intent.getStringExtra("Path")+"/build/java/");
+        //这里暂时注释,不删除老的代码
+        deleteAllFiles(javapath);
+    }
+
     //菜单事件监听
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item)
@@ -88,40 +150,47 @@ public class EditCodeActivity extends AppCompatActivity
         String content = content_edit.getText().toString();
         switch (item.getItemId())
         {
+            //点击运行：
             case R.id.compilerun:
+                LogUtil.e("EditCodeActivity---onOptionsItemSelected-->start:::");
                 Intent intent = getIntent();
+                //清理编译：
+                cleanBuild();
                 modifyFile(intent.getStringExtra("FilesPath"),content_edit.getText().toString(),false);
                 //处理soft文件以及java文件
                 List<String> list = CompileUtils.getFiles(intent.getStringExtra("Path")+"/src/");
                 for (String i : list)
                 {
-                    if (i.contains(".java"))
-                    {
-                        String j = i.replace("src", "build/java");
-                        try
-                        {
-                            CompileUtils.copyFile(new File(i), new File(j));
-                        }
-                        catch (IOException e)
-                        {}
-                    }
-                    else if (i.contains(".soft"))
-                    {
-                        String j = i.replace("src", "build/java").replace(".soft", ".java");
-                        try
-                        {
-                            CompileUtils.writeFile(getSoft(i), j);
-                        }
-                        catch (Exception e)
-                        {}
-                    }
+                    //编译移动查找代码文件(java,soft),并移动到待编译目录(Build/java)
+                    findFile(new File(i));
                 }
                 if(CompileUtils.aapt(intent.getStringExtra("Path")+"/res/",intent.getStringExtra("Path")+"/build/gen/",intent.getStringExtra("Path")+"/assets/",intent.getStringExtra("Path")+"/AndroidManifest.xml","/data/data/com.application.developer/files/android.jar",intent.getStringExtra("Path")+"/build/bin/resources.ap_"))
                 {
+
+                    String javaFilePath = intent.getStringExtra("Path")+"/build/java/";
+                    for (String itemStr:filePathAll){
+                        javaFilePath+=":"+itemStr;
+                    }
                     //使用aapt编译资源
                     //res文件夹路径，gen文件夹路径，assets文件夹路径，AndroidManifest.xml文件路径，android.jar文件路径，ap_输出路径
-                    if(CompileUtils.ecj(intent.getStringExtra("Path")+"/libs/","/data/data/com.application.developer/files/android.jar",intent.getStringExtra("Path")+"/build/java/",intent.getStringExtra("Path")+"/build/gen/",intent.getStringExtra("Path")+"/build/bin/classes/",intent.getStringExtra("Path")+"/build/java/Main.java"))
+                    //if(CompileUtils.ecj(intent.getStringExtra("Path")+"/libs/","/data/data/com.application.developer/files/android.jar",intent.getStringExtra("Path")+"/build/java/",intent.getStringExtra("Path")+"/build/gen/",intent.getStringExtra("Path")+"/build/bin/classes/",intent.getStringExtra("Path")+"/build/java/Main.java"))
+
+                    boolean buildOk = true;
+                    for (String itemPath:filePathAll){
+                      boolean ccurentBuildResult = CompileUtils.ecj(intent.getStringExtra("Path")+"/libs/",
+                                "/data/data/com.application.developer/files/android.jar",
+                                javaFilePath,
+                                intent.getStringExtra("Path")+"/build/gen/",
+                                intent.getStringExtra("Path")+"/build/bin/classes/",
+                              itemPath);
+                      if (!ccurentBuildResult){
+                          buildOk = ccurentBuildResult;
+                      }
+                    }
+                    if(buildOk)
                     {
+                        //intent.getStringExtra("Path")+"/build/java/com/example/mytestthem/MainTest.java"))
+
                         //使用ecj编译java
                         //libs文件夹路径，android.jar文件路径，java文件存放路径，r.java存放路径，class文件存放路径，第一个被执行的java文件
                         if(CompileUtils.dex(intent.getStringExtra("Path")+"/build/bin/classes.dex",intent.getStringExtra("Path")+"/build/bin/classes/",intent.getStringExtra("Path")+"/libs/"))
@@ -138,7 +207,9 @@ public class EditCodeActivity extends AppCompatActivity
                                     //key文件，未签名的apk文件路径，签名后的apk文件输出路径
                                     //installApk(DatailsActivity.this,intent.getStringExtra("Path")+"/build/bin/app.apk");
                                     File javapath = new File(intent.getStringExtra("Path")+"/build/java/");
-                                    deleteAllFiles(javapath);
+
+                                    //这里暂时注释,不删除老的代码
+                                    //deleteAllFiles(javapath);
                                     installApk(intent.getStringExtra("Path")+"/build/bin/app.apk");
                                     Toast.makeText(EditCodeActivity.this,"编译成功",Toast.LENGTH_SHORT).show();
                                 }

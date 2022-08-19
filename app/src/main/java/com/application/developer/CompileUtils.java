@@ -20,6 +20,8 @@ import com.android.sdklib.build.ApkBuilder;
 import java.io.PrintStream;
 import com.android.sdklib.build.ApkCreationException;
 import com.android.sdklib.build.SealedApkException;
+import com.application.developer.util.LogUtil;
+
 import kellinwood.security.zipsigner.ZipSigner;
 import java.security.GeneralSecurityException;
 import org.eclipse.jdt.internal.compiler.batch.Main;
@@ -34,6 +36,12 @@ public class CompileUtils
     public static void copyFile(File source, File dest) throws IOException
     {
         FileChannel inputChannel = new FileInputStream(source).getChannel();
+        if (dest!=null){
+            if (!dest.exists()){
+                dest.getParentFile().mkdirs();
+                dest.createNewFile();
+            }
+        }
         FileChannel outputChannel = new FileOutputStream(dest).getChannel();
         outputChannel.transferFrom(inputChannel, 0, inputChannel.size());
         inputChannel.close();
@@ -273,6 +281,10 @@ public class CompileUtils
             //第一个被执行的java文件
             mainactivity
         };
+        String cmdStr = "";
+        for (String item:args){
+            cmdStr+=" "+item;
+        }
         //执行编译并返回结果
         boolean b = main.compile(args);
         //如果失败请打印此信息
@@ -280,7 +292,9 @@ public class CompileUtils
         String s1 = baos1.toString();
         //获得错误信息字符串
         String s2 = baos2.toString();
-        Log.e("ecj",s2);
+        LogUtil.e("CompileUtils---error--s2"+s2);
+
+        LogUtil.e("CompileUtils---ecj:: cmdStr:"+cmdStr+" s1:"+s1+" s2:"+s2);
         return b;
     }
 
