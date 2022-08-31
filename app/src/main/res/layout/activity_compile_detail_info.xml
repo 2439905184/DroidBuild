@@ -46,6 +46,7 @@
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:layout_margin="10dp"
                 android:textSize="18sp"
+                android:textIsSelectable="true"
                 android:textColor="#F32617"/>
 
         </LinearLayout>
