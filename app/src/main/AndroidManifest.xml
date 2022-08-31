@@ -79,6 +79,10 @@
         <activity
             android:name=".WebActivity"
             android:label="WebView"/>
+        <activity android:name=".activity.CompileDetailInfoActivity"
+            android:theme="@style/CodeTheme"
+            android:label="编译信息查看器"
+            />
 
     </application>
 

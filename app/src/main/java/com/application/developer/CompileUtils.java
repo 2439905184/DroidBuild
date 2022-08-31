@@ -20,6 +20,7 @@ import com.android.sdklib.build.ApkBuilder;
 import java.io.PrintStream;
 import com.android.sdklib.build.ApkCreationException;
 import com.android.sdklib.build.SealedApkException;
+import com.application.developer.util.CompileInformationManager;
 import com.application.developer.util.LogUtil;
 
 import kellinwood.security.zipsigner.ZipSigner;
@@ -293,7 +294,8 @@ public class CompileUtils
         //获得错误信息字符串
         String s2 = baos2.toString();
         LogUtil.e("CompileUtils---error--s2"+s2);
-
+        //单例记录编译信息中的错误信息
+        CompileInformationManager.getInstance().setCompileErrorMsg(s2);
         LogUtil.e("CompileUtils---ecj:: cmdStr:"+cmdStr+" s1:"+s1+" s2:"+s2);
         return b;
     }

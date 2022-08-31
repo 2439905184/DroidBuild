@@ -9,6 +9,7 @@ import androidx.appcompat.app.*;
 import androidx.appcompat.widget.*;
 import com.application.developer.*;
 import com.application.developer.editor.*;
+import com.application.developer.util.CompileEmptyDialog;
 import com.application.developer.util.LogUtil;
 import com.application.developer.view.*;
 import androidx.appcompat.widget.Toolbar;
@@ -33,11 +34,13 @@ public class EditCodeActivity extends AppCompatActivity
     //内容编辑框
     private Toolbar toolbar;
     private SymbolView sv;
+    private Context mContext;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
     {
 		super.onCreate(savedInstanceState);
+        mContext = this;
 		setContentView(R.layout.activity_editcode);
         content_edit = findViewById(R.id.textEditor);
         toolbar = findViewById(R.id.fragment_editor_Toolbar);
@@ -185,6 +188,8 @@ public class EditCodeActivity extends AppCompatActivity
                               itemPath);
                       if (!ccurentBuildResult){
                           buildOk = ccurentBuildResult;
+                          showCompileDialog();
+                          return true;
                       }
                     }
                     if(buildOk)
@@ -445,6 +450,34 @@ public class EditCodeActivity extends AppCompatActivity
         }
         startActivity(intent);
     }
-    
+
+
+    //信息弹窗
+    CompileEmptyDialog mCompileInfoDialog;
+    /**
+     * 显示编译信息dialog
+     */
+    public void showCompileDialog(){
+        if (mCompileInfoDialog != null && mCompileInfoDialog.isShowing()) {
+            mCompileInfoDialog.dismiss();
+        }
+        CompileEmptyDialog.Builder waybillInterceptDialogBuild = new CompileEmptyDialog.Builder(mContext)
+                .setContentView(R.layout.dialog_compile_info_ui)
+                .setGravity(Gravity.CENTER);
+        mCompileInfoDialog = waybillInterceptDialogBuild.build();
+        mCompileInfoDialog.setCancelable(false);
+        mCompileInfoDialog.setCanceledOnTouchOutside(false);
+        mCompileInfoDialog.show();
+        View view = mCompileInfoDialog.getContextView();
+        TextView tvContent = view.findViewById(R.id.tvContent);
+        TextView tvLeft = view.findViewById(R.id.tvLeft);
+        TextView tvRight = view.findViewById(R.id.tvRight);
+
+        tvContent.setText("检测到编译异常,点击立即查看可看详情");
+        tvLeft.setOnClickListener(view12 -> {
+            startActivity(new Intent(EditCodeActivity.this,CompileDetailInfoActivity.class));
+        });
+        tvRight.setOnClickListener(view1 -> mCompileInfoDialog.dismiss());
+    }
     
 }
